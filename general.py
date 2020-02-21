@@ -6,6 +6,7 @@ import re
 
 CONNECT_TABLE = 'diary.sqlite'
 TIMEFORM = '%Y-%m-%d %H:%M'
+PERIODFORM = '%Y %B'
 
 
 def format_user_answer_time(user_answer: str) -> str:
@@ -14,7 +15,7 @@ def format_user_answer_time(user_answer: str) -> str:
     else check answer, transform it and return in right format
     '%Y-%m-%d %H:%M'
     '''
-    pattern = r'(\d{4})\D{1,}(\d{2})\D{1,}(\d{2})\D{1,}(\d{2})\D{1,}(\d{2})'
+    pattern = r'(\d{4})\D{0,}(\d{2})\D{0,}(\d{2})\D{0,}(\d{2})\D{0,}(\d{2})'
     if not user_answer:
         user_answer = datetime.now().strftime(TIMEFORM)
     match = re.search(pattern, user_answer)
@@ -45,7 +46,7 @@ def standart_sql_query(qry: str, fetchall=True):
         con.close()
 
 
-def extract_discipline_summary_time(discipline: str) -> tuple:
+def extract_discipline_summary_time(discipline: str, period) -> tuple:
     '''
     Find total time for discipline for this month. Return =>
     (26, 15, 49, datetime.timedelta(days=1, seconds=8149))
@@ -57,12 +58,11 @@ def extract_discipline_summary_time(discipline: str) -> tuple:
     """
     x = standart_sql_query(qry, fetchall=True)
     summary_time = timedelta()
-    # hours, minutes = 0, 0
     for row in x:
         # ('2020-02-18 00:27:10', '2020-02-18 01:54:23', 'django')
         st, ft, di = row
         start = datetime.strptime(st, TIMEFORM)
-        if start.month == datetime.now().month:
+        if start.month == period:
             finish = datetime.strptime(ft, TIMEFORM)
             summary_time += (finish - start)
     seconds = summary_time.total_seconds()
@@ -143,7 +143,7 @@ def close_current_session(open_sessions, close_session) -> bool:
         print(f'You input close session in - {close_session} '
               f'but your open session - {op_sess}, it mean that your '
               'finish before your start. Try again something better.')
-        sys.exit()
+        return False
     qry = f"""
             UPDATE diary_table
             set finish_time = '{close_session}'
@@ -156,18 +156,20 @@ def close_current_session(open_sessions, close_session) -> bool:
 def get_list_of_disciplines(with_time=False):
     '''
     create query to disciplines table, and return list_of_disciplines if
-    with_time = False, or return dict_with_disc_and_time
+    with_time = False, or return disc_and_time_dict
     (show time interval for this month) If with_time=True
     '''
+    period = datetime.now()
     query = 'select rowid, discipline from disciplines'
     list_of_disciplines = [i[1] for i in standart_sql_query(query)]
-    dict_with_disc_and_time = {}
+    disc_and_time_dict = {}
     if with_time is False:
         return list_of_disciplines
     else:
         for d in list_of_disciplines:
-            dict_with_disc_and_time[d] = extract_discipline_summary_time(d)
-        return dict_with_disc_and_time
+            disc_and_time_dict[d] = extract_discipline_summary_time(
+                d, period.month)
+        return disc_and_time_dict, period
 
 
 def list_of_open_sessions() ->tuple:
@@ -215,20 +217,33 @@ if __name__ == "__main__":
 
     create_all_tables()  # test and create all tables if it not exist
 
+    # Check open sessions and close them
+    # -----------------------------
     open_sessions = list_of_open_sessions()
     if open_sessions:
         print(f'You should close the session - "{open_sessions[0][1]}", '
               f'which started {open_sessions[0][2]}')
 
-        close_session = input('Input time for finish in form 2020-02-17 20:51 '
-                              'or just enter, in this case it will add'
-                              ' current time: ')
+        while True:
+            try:
+                close_session = input('Input time for finish in form '
+                                      f'{datetime.now().strftime(TIMEFORM)} '
+                                      'or just enter, in this case it will add'
+                                      ' current time: ')
 
-        close_session = format_user_answer_time(close_session)
-        close_current_session(open_sessions, close_session)
+                close_session = format_user_answer_time(close_session)
+                res = close_current_session(open_sessions, close_session)
+                if res:
+                    break
+            except ValueError as Err:
+                print(f'{Err}: ')
+    # -------------------------------
 
-    ld = get_list_of_disciplines(with_time=True)
+    # Select the discipline or create
+    # -------------------------------
+    ld, period = get_list_of_disciplines(with_time=True)
     ld = perfect_func(ld)
+    print(f'''\n\nStatistic for {period.strftime(PERIODFORM)} month\n\n''')
     for v in ld:
         print(
             f'''{v[0]} : {v[1][0]} hours, {v[1][1]} min, {v[1][2]} sec.
@@ -244,9 +259,12 @@ if __name__ == "__main__":
         sys.exit()
     elif choose_disc_or_create not in list_of_disciplines:
         add_new_discipline(choose_disc_or_create)
+    # -------------------------------
 
+    # Choose starttime and start session
+    # -------------------------------
     choose_time = input('Start session! Choose start-time in format '
-                        '2020-02-17 20:51 '
+                        f'{datetime.now().strftime(TIMEFORM)} '
                         'or just enter for current time: ')
 
     if not choose_time:
@@ -254,13 +272,4 @@ if __name__ == "__main__":
     choose_time = format_user_answer_time(choose_time)
     start_session = add_new_session(choose_time, choose_disc_or_create)
 
-    print('session will started')
-
-    # try:
-    #     sys.exit(0)
-    # except SystemExit:
-    #     pass
-
-
-
-
+    print('\n\n-------session will started---------\n\n')
