@@ -38,9 +38,9 @@ def standart_sql_query(qry: str, fetchall=True):
             con.cursor().execute(qry)
             con.commit()
     except sqlite3.DatabaseError as Err:
-        if fetchall is True:
-            print('Error: ', Err)
-            return None
+        # if fetchall is True:
+        print('Error from standart_sql_query: ', Err)
+        return None
 
     finally:
         con.close()
@@ -73,7 +73,6 @@ def extract_discipline_summary_time(discipline: str, period) -> tuple:
 
 def create_all_tables():
     '''
-    test with test_existing_table(table:str)
     if some table not exist, create it
     '''
 
@@ -82,12 +81,11 @@ def create_all_tables():
                  discipline int,
                  finish_time timestamp,
                  FOREIGN KEY(discipline) REFERENCES disciplines(rowid))'''
+
     query1 = f'''create table if not exists disciplines
                 (discipline text)'''
-    query3 = f'''create table if not exists SOME
-                (test text,
-                 name text)'''
-    queries = [query1, query2, query3]
+
+    queries = [query1, query2]
 
     for query in queries:
         con = sqlite3.connect(CONNECT_TABLE)
@@ -175,7 +173,7 @@ def get_list_of_disciplines(with_time=False):
 def list_of_open_sessions() ->tuple:
     '''
     find open sessions if it is. Return =>
-    [(17, 'postgres', '2020-02-18 16:57:52.240594')]
+    [(17, 'postgres', '2020-02-18 16:57')]
     '''
     qry = f"""
     select dt.rowid, d.discipline, dt.start_time
