@@ -3,10 +3,21 @@ import sqlite3
 from datetime import datetime, timedelta
 import sys
 import re
+import logging
 
 CONNECT_TABLE = 'diary.sqlite'
 TIMEFORM = '%Y-%m-%d %H:%M'
 PERIODFORM = '%Y %B'
+format_code = (u'%(filename)s[L:%(lineno)d]# %(levelname)-8s'
+               u'[%(asctime)s]%(message)s')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+form = logging.Formatter(format_code)
+handler = logging.FileHandler('study.log')
+# handler.setLevel(logging.DEBUG)
+handler.setFormatter(form)
+logger.addHandler(handler)
 
 
 def format_user_answer_time(user_answer: str) -> str:
@@ -181,6 +192,7 @@ def list_of_open_sessions() ->tuple:
     where dt.discipline = d.rowid and dt.finish_time = 'None'
     """
     x = standart_sql_query(qry, fetchall=True)
+    logger.debug(f'list_of_open_sessions return - {x}')
     return x
 
 
@@ -194,13 +206,13 @@ def perfect_func(ld: dict) ->list:
     ('css     ', (23, 34, 0, datetime.timedelta(seconds=84840))),
     ]
     '''
-    grant = len(max(ld))
+    max_len = len(max(ld, key=len))
     new_ld = {}
-    for d in ld.keys():
-        len_d = len(d)
-        different = grant - len_d
-        d2 = f'''{d} {different * ' '}'''
-        new_ld[d2] = ld[d]
+    for discipline in ld.keys():
+        len_discipline = len(discipline)
+        different = max_len - len_discipline
+        d2 = f'''{discipline} {different * ' '}'''
+        new_ld[d2] = ld[discipline]
     list_ld = list(new_ld.items())
     list_ld.sort(key=lambda x: -x[1][0])
     return list_ld
@@ -212,7 +224,6 @@ if __name__ == "__main__":
     разобрать sys.argv , задать при -а (более 1 аргумента) обрабатывать
     starttime disc fintime
     '''
-
     create_all_tables()  # test and create all tables if it not exist
 
     # Check open sessions and close them
@@ -232,9 +243,12 @@ if __name__ == "__main__":
                 close_session = format_user_answer_time(close_session)
                 res = close_current_session(open_sessions, close_session)
                 if res:
+                    logger.debug(f'session {open_sessions}'
+                                 f'closed by {close_session}')
                     break
             except ValueError as Err:
                 print(f'{Err}: ')
+
     # -------------------------------
 
     # Select the discipline or create
@@ -268,6 +282,8 @@ if __name__ == "__main__":
     if not choose_time:
         choose_time = datetime.now().strftime(TIMEFORM)
     choose_time = format_user_answer_time(choose_time)
+    logger.debug(f'choose_time - {choose_time},'
+                 f' choosing discipline - {choose_disc_or_create}')
     start_session = add_new_session(choose_time, choose_disc_or_create)
 
     print('\n\n-------session will started---------\n\n')

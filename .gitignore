@@ -8,4 +8,5 @@ contest.py
 diary.sqlite
 test_db.py
 test_general.py
+study.log
 
