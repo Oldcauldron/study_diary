@@ -8,8 +8,6 @@ from logs import go_log
 CONNECT_TABLE = 'diary.sqlite'
 TIMEFORM = '%Y-%m-%d %H:%M'
 PERIODFORM = '%Y %B'
-format_code = (u'%(filename)s[L:%(lineno)d]# %(levelname)-8s'
-               u'[%(asctime)s]%(message)s')
 
 logger = go_log()
 
