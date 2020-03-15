@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import sys
 import re
-import logging
+from logs import go_log
 
 CONNECT_TABLE = 'diary.sqlite'
 TIMEFORM = '%Y-%m-%d %H:%M'
@@ -11,13 +11,7 @@ PERIODFORM = '%Y %B'
 format_code = (u'%(filename)s[L:%(lineno)d]# %(levelname)-8s'
                u'[%(asctime)s]%(message)s')
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-form = logging.Formatter(format_code)
-handler = logging.FileHandler('study.log')
-# handler.setLevel(logging.DEBUG)
-handler.setFormatter(form)
-logger.addHandler(handler)
+logger = go_log()
 
 
 def format_user_answer_time(user_answer: str) -> str:
@@ -26,7 +20,7 @@ def format_user_answer_time(user_answer: str) -> str:
     else check answer, transform it and return in right format
     '%Y-%m-%d %H:%M'
     '''
-    pattern = r'(\d{4})\D{0,}(\d{2})\D{0,}(\d{2})\D{0,}(\d{2})\D{0,}(\d{2})'
+    pattern = r'(\d{4})\D{0,}(\d{2})\D{0,}(\d{2})\D{0,}(\d{1,2})\D{0,}(\d{2})'
     if not user_answer:
         user_answer = datetime.now().strftime(TIMEFORM)
     match = re.search(pattern, user_answer)

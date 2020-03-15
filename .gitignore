@@ -1,9 +1,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+__other/
 *.py[cod]
 *$py.class
 plan.txt
-cmd.exe*
 contest.py
 diary.sqlite
 test_db.py
